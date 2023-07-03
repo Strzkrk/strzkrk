@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Start Python Function</title>
+    <style>
+        .frame {
+            position: relative;
+            border: 1px solid #000;
+            width: 600px;
+            height: 400px;
+            resize: both;
+            overflow: auto;
+            cursor: move;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+            function avg(array) {
+                var total = 0;
+                var count = 0;
+
+                array.forEach(function(item, index) {
+                total += item;
+                count++;
+                });
+                var avArr=parseFloat(parseInt(100*total/count)/100);
+
+                return avArr;
+            }
+
+        $(document).ready(function() {
+            var intervalId;  // Variable to store the interval ID
+
+            var respArr1 = []
+            var respArr2 = []
+
+            var chart1Ctx = document.getElementById('chart1').getContext('2d');
+            var chart1Data = [];
+            var chart1Labels = [];
+        
+            var chart2Ctx = document.getElementById('chart2').getContext('2d');
+            var chart2Data = [];
+            var chart2Labels = [];
+        
+            var chart1 = new Chart(chart1Ctx, {
+                type: 'line',
+                data: {
+                    labels: chart1Labels,
+                    datasets: [{
+                        label: 'Response 1',
+                        data: chart1Data,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        fill: false,
+                        pointRadius: 0 // Set pointRadius to 0 to hide points
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 0, // Set the minimum value of the y-axis scale to 0
+                            max: 2500 // Set the maximum value of the y-axis scale to 2500
+                        },
+                        x: {
+                            display: false
+                        }
+                    },
+                    hide: {
+                        animations: {
+                        x: {
+                            to: 0
+                        },
+                        y: {
+                            to: 0
+                        }
+                        }
+                    },
+                    animations:false,
+                    animation: {
+                        duration: 0
+                    }
+                }
+            });
+        
+            var chart2 = new Chart(chart2Ctx, {
+                type: 'line',
+                data: {
+                    labels: chart2Labels,
+                    datasets: [{
+                        label: 'Response 2',
+                        data: chart2Data,
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        fill: false,
+                        pointRadius: 0 // Set pointRadius to 0 to hide points
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 0, // Set the minimum value of the y-axis scale to 0
+                            max: 2500 // Set the maximum value of the y-axis scale to 2500
+                        },
+                        x: {
+                            display: false
+                        }
+                    },
+                    hide: {
+                        animations: {
+                        x: {
+                            to: 0
+                        },
+                        y: {
+                            to: 0
+                        }
+                        }
+                    },
+                    animations:false,
+                    animation: {
+                        duration: 0
+                    }
+                }
+            });
+            // Add event listener to the toggle button
+            $('#toggleButton').click(function() {
+                toggleFunction();
+            });
+
+            function toggleFunction() {
+                // Send an HTTP request to toggle the function
+                $.ajax({
+                    url: 'http://192.168.0.240/toggle',
+                    type: 'GET',
+                    success: function(response) {
+                        console.log('Toggle successful');
+                    },
+                    error: function(xhr) {
+                        console.log('Toggle failed');
+                    }
+                });
+            }
+
+            $('#myCheckbox').change(function() {
+                if (this.checked) {
+                    // Checkbox is checked
+                    intervalId = setInterval(callFlaskFunction, 200);  // Call the Flask function every 2 seconds
+                } else {
+                    // Checkbox is unchecked
+                    clearInterval(intervalId);  // Stop calling the Flask function
+                }
+            });
+
+            function callFlaskFunction() {
+                $.ajax({
+                    url: '/send',
+                    type: 'POST',
+                    success: function(data) {
+                        // Update the HTML elements with the received values
+                        $('#response1').text(data.response1 + " W");
+                        $('#response2').text(data.response2 + " W");
+                        // Update the chart data
+
+                        respArr1.push(parseFloat(data.response1));
+                        if (respArr1.length > 5) {
+                            respArr1.shift();
+                        }
+                        avgArr=avg(respArr1);
+                        chart1Data.push(JSON.stringify(avgArr));
+                        console.log(JSON.stringify(avgArr))
+                        chart1Labels.push('');
+                        if (chart1Data.length > 1500) {
+                            chart1Data.shift();
+                            chart1Labels.shift();
+                        }
+                        chart1.data.datasets[0].data = chart1Data.slice(); // Add .slice() to create a copy of the array
+                        chart1.data.labels = chart1Labels.slice(); // Add .slice() to create a copy of the array
+                        chart1.update();
+                        
+                        respArr2.push(parseFloat(data.response2));
+                        if (respArr2.length > 5) {
+                            respArr2.shift();
+                        }
+                        avgArr=avg(respArr2);
+                        chart2Data.push(JSON.stringify(avgArr));
+                        chart2Labels.push('');
+                        if (chart2Data.length > 1500) {
+                            chart2Data.shift();
+                            chart2Labels.shift();
+                        }
+                        chart2.data.datasets[0].data = chart2Data.slice(); // Add .slice() to create a copy of the array
+                        chart2.data.labels = chart2Labels.slice(); // Add .slice() to create a copy of the array
+                        chart2.update();                                                                               
+                    },
+                    error: function(xhr) {
+                        console.log(xhr.responseText);
+                        // Handle any errors
+                    }
+                });
+            }
+            function adjustChartSize() {
+                var containerWidth = $('#chartContainer').width();
+                var chartHeight = containerWidth / 2; // Adjust the aspect ratio as needed
+        
+                $('#chart1').attr('height', chartHeight);
+                $('#chart2').attr('height', chartHeight);
+            }
+        
+            adjustChartSize(); // Adjust the chart size initially
+        
+            $(window).resize(function() {
+                adjustChartSize(); // Adjust the chart size when the window is resized
+                });
+            });            
+            var frame = document.getElementById('frame');
+            var isMouseDown = false;
+            var startX;
+            var startY;
+            var initialLeft;
+            var initialTop;
+
+        frame.addEventListener('mousedown', function(event) {
+            if (event.button === 1) {
+                event.preventDefault();
+                isMouseDown = true;
+                startX = event.clientX;
+                startY = event.clientY;
+                initialLeft = frame.offsetLeft;
+                initialTop = frame.offsetTop;
+            }
+        });
+
+        frame.addEventListener('mouseup', function() {
+            isMouseDown = false;
+        });
+
+        frame.addEventListener('mousemove', function(event) {
+            if (isMouseDown) {
+                event.preventDefault();
+                var offsetX = event.clientX - startX;
+                var offsetY = event.clientY - startY;
+                var newLeft = initialLeft + offsetX;
+                var newTop = initialTop + offsetY;
+                frame.style.left = newLeft + 'px';
+                frame.style.top = newTop + 'px';
+            }
+        });
+
+
+    </script>
+</head>
+<body>
+    <div class="frame" id="frame">
+        <h1>myStrom SBRS</h1>
+        <label for="myCheckbox">Enable Function:</label>
+        <input type="checkbox" id="myCheckbox">
+        <button id="toggleButton">Toggle</button>
+
+        <h1>Data:</h1>
+        <p>192.168.0.157/report</p>
+        <p>Power: <span id="response1"></span></p>
+        <p>192.168.0.240/report</p>
+        <p>Power: <span id="response2"></span></p>
+        <div id="chartContainer" style="border: 1px solid #ccc; padding: 10px; height: 200px;">
+            <canvas id="chart1" width="400"></canvas>
+            <canvas id="chart2" width="400"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Set the height of the canvas elements dynamically
+        var canvasHeight = 200;
+        document.getElementById('chart1').height = canvasHeight;
+        document.getElementById('chart2').height = canvasHeight;
+    </script>
+
+</body>
+</html>
